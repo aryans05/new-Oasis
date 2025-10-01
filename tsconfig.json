@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", // modern target (better than ES2017)
+    "lib": ["dom", "dom.iterable", "esnext"], // required libs
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler", // correct for Next.js App Router
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve", // Next.js needs "preserve"
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "baseUrl": ".", // ✅ important for paths
+    "paths": {
+      "@/*": ["./*"] // alias @/ -> project root
+    }
+  },
+  "include": [
+    "next-env.d.ts", // Next.js auto-generated
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "types/**/*.d.ts" // ✅ include your global types (e.g., next-auth.d.ts)
+  ],
+  "exclude": ["node_modules"]
+}
