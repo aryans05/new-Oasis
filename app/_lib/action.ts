@@ -9,7 +9,7 @@ import { redirect } from "next/navigation";
 
 //////////////////////////////////////////
 // Update guest
-export async function updateGuest(formData: FormData) {
+export async function updateGuest(formData: FormData): Promise<void> {
   const session = await auth();
   if (!session) throw new Error("You must be logged in");
 
@@ -23,52 +23,45 @@ export async function updateGuest(formData: FormData) {
 
   const updateData = { nationality, countryFlag, nationalID };
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("guests")
     .update(updateData)
-    .eq("email", session.user.email)
-    .select("id, email, fullName, nationality, nationalID, countryFlag")
-    .single();
+    .eq("email", session.user.email);
 
-  if (error || !data) {
-    console.error("Supabase error in updateGuest:", error);
+  if (error) {
+    console.error("❌ Supabase error in updateGuest:", error);
     throw new Error("Guest could not be updated");
   }
 
   revalidatePath("/account/profile");
-  return { guest: data };
 }
 
 //////////////////////////////////////////
-// INTERNAL: low-level create booking helper (used by both programmatic callers
-// and the createBookingAction server action). Returns created booking or throws.
+// INTERNAL helper for booking creation
 async function createBookingInternal(
   bookingData: {
     cabinId: string;
     startDate: string;
     endDate: string;
     numNight: number;
-    // optional extras can be present
   },
   formFields: {
     numGuests?: number;
     observations?: string;
   }
 ) {
-  // Authenticate server-side
   const session = await auth();
   if (!session) throw new Error("You must be logged in");
 
-  // Find guest
-  const { data: guest } = await supabase
+  const { data: guest, error: guestError } = await supabase
     .from("guests")
     .select("id")
     .eq("email", session.user.email)
     .single();
 
-  if (!guest) throw new Error("Guest not found");
+  if (guestError || !guest) throw new Error("Guest not found");
 
-  // Recompute price server-side
+  // ✅ recompute price on the server
   const { regularPrice, discount } = await getCabinPrice(bookingData.cabinId);
   const cabinPrice = bookingData.numNight * (regularPrice - discount);
 
@@ -95,28 +88,17 @@ async function createBookingInternal(
     .single();
 
   if (error || !createdBooking) {
-    console.error("Supabase error in createBookingInternal:", error);
+    console.error("❌ Supabase error in createBookingInternal:", error);
     throw new Error("Booking could not be created");
   }
 
-  // Revalidate cabin page so server components refresh
   revalidatePath(`/cabins/${bookingData.cabinId}`);
-
   return createdBooking;
 }
 
 //////////////////////////////////////////
-// Server action intended to be used as a <form action={createBookingAction}>
-// It extracts required fields from the FormData, calls the internal helper,
-// and then performs a server redirect to the thank-you page.
-export async function createBookingAction(formData: FormData) {
-  // The form is expected to include these fields:
-  // - cabinId (string)
-  // - startDate (ISO string)
-  // - endDate (ISO string)
-  // - numNight (string or number)
-  // - numGuests (optional)
-  // - observations (optional)
+// Server action for <form action={...}>
+export async function createBookingAction(formData: FormData): Promise<void> {
   const cabinId = String(formData.get("cabinId") ?? "");
   const startDate = String(formData.get("startDate") ?? "");
   const endDate = String(formData.get("endDate") ?? "");
@@ -127,25 +109,20 @@ export async function createBookingAction(formData: FormData) {
     throw new Error("Missing booking information");
   }
 
-  const numGuestsRaw = formData.get("numGuests");
-  const numGuests = numGuestsRaw ? Number(numGuestsRaw) : 1;
+  const numGuests = Number(formData.get("numGuests") ?? 1);
   const observations = String(formData.get("observations") ?? "");
 
-  // Call internal helper which authenticates and inserts
   await createBookingInternal(
     { cabinId, startDate, endDate, numNight },
     { numGuests, observations }
   );
 
-  // Server redirect to thank-you page (this returns a 3xx to the browser)
   redirect("/cabins/thankyou");
 }
 
 //////////////////////////////////////////
-// For backwards-compat or programmatic server usage you can still export
-// a function that accepts bookingData + formData and reuses the internal helper.
+// Programmatic booking creation (not for <form>)
 export async function createBooking(bookingData: any, formData: FormData) {
-  // build formFields from formData
   const numGuests = Number(formData.get("numGuests") ?? 1);
   const observations = String(formData.get("observations") ?? "");
 
@@ -159,25 +136,23 @@ export async function createBooking(bookingData: any, formData: FormData) {
     { numGuests, observations }
   );
 
-  // return created booking for programmatic callers (does NOT redirect)
   return { booking: created };
 }
 
 //////////////////////////////////////////
 // Delete reservation
-export async function deleteReservation(formData: FormData) {
+export async function deleteReservation(formData: FormData): Promise<void> {
   const bookingId = String(formData.get("bookingId"));
-
   const session = await auth();
   if (!session) throw new Error("You must be logged in");
 
-  const { data: guest } = await supabase
+  const { data: guest, error: guestError } = await supabase
     .from("guests")
     .select("id")
     .eq("email", session.user.email)
     .single();
 
-  if (!guest) throw new Error("Guest not found");
+  if (guestError || !guest) throw new Error("Guest not found");
 
   const guestBookings = await getBookings(guest.id);
   const guestBookingIds = guestBookings.map((b) => String(b.id));
@@ -192,29 +167,27 @@ export async function deleteReservation(formData: FormData) {
     .eq("id", bookingId);
 
   if (error) {
-    console.error("Supabase error in deleteReservation:", error);
+    console.error("❌ Supabase error in deleteReservation:", error);
     throw new Error("Booking could not be deleted");
   }
 
   revalidatePath("/account/reservations");
-  return { success: true };
 }
 
 //////////////////////////////////////////
 // Update booking
-export async function updateBooking(formData: FormData) {
+export async function updateBooking(formData: FormData): Promise<void> {
   const bookingId = String(formData.get("bookingId"));
-
   const session = await auth();
   if (!session) throw new Error("You must be logged in");
 
-  const { data: guest } = await supabase
+  const { data: guest, error: guestError } = await supabase
     .from("guests")
     .select("id")
     .eq("email", session.user.email)
     .single();
 
-  if (!guest) throw new Error("Guest not found");
+  if (guestError || !guest) throw new Error("Guest not found");
 
   const guestBookings = await getBookings(guest.id);
   const guestBookingIds = guestBookings.map((b) => String(b.id));
@@ -229,29 +202,26 @@ export async function updateBooking(formData: FormData) {
       (formData.get("observations") as string)?.slice(0, 1000) || "",
   };
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("bookings")
     .update(updateData)
-    .eq("id", bookingId)
-    .select("id, startDate, endDate, guestId")
-    .single();
+    .eq("id", bookingId);
 
-  if (error || !data) {
-    console.error("Supabase error in updateBooking:", error);
+  if (error) {
+    console.error("❌ Supabase error in updateBooking:", error);
     throw new Error("Booking could not be updated");
   }
 
   revalidatePath(`/account/reservations/edit/${bookingId}`);
   revalidatePath("/account/reservations");
-  return { booking: data };
 }
 
 //////////////////////////////////////////
 // Auth helpers
-export async function signInAction() {
+export async function signInAction(): Promise<void> {
   await signIn("google", { redirectTo: "/account" });
 }
 
-export async function signOutAction() {
+export async function signOutAction(): Promise<void> {
   await signOut({ redirectTo: "/" });
 }

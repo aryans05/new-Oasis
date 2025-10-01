@@ -5,6 +5,7 @@ import DateSelector from "./DateSelector";
 import ReservationForm from "./ReservationForm";
 import { DateRange } from "react-day-picker";
 import LoginMessage from "./LoginMessage";
+import type { User as NextAuthUser } from "next-auth"; // ✅ official NextAuth type
 
 // App settings type
 interface Settings {
@@ -13,20 +14,17 @@ interface Settings {
   maxGuestsPerBooking: number;
 }
 
-// User type from NextAuth session
-interface User {
-  id: string; // NextAuth token.sub is always string
-  guestId?: string;
-  name?: string | null;
-  email?: string | null;
-  image?: string | null;
-}
+// ✅ AppUser type aligned with next-auth.d.ts augmentation
+type AppUser = NextAuthUser & {
+  id: string; // always string (token.sub)
+  guestId?: string | null; // ✅ allow null OR undefined
+};
 
 interface ReservationProps {
   cabinId: string;
   bookedDates: (Date | string)[];
   settings: Settings;
-  user: User | null; // ✅ expect user directly, not whole session
+  user: AppUser | null; // ✅ now consistent
 }
 
 export default function Reservation({
@@ -39,6 +37,7 @@ export default function Reservation({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 border border-primary-800 rounded-lg p-6 min-h-[400px] mb-10 text-accent-400">
+      {/* ✅ Date picker */}
       <DateSelector
         settings={settings}
         bookedDates={bookedDates}
@@ -47,12 +46,20 @@ export default function Reservation({
         onChange={setSelectedRange}
       />
 
+      {/* ✅ Show form if logged in, otherwise login prompt */}
       {user ? (
         <ReservationForm
           cabinId={cabinId}
           selectedDate={selectedRange}
           settings={settings}
-          user={user} // ✅ no TS error
+          user={{
+            ...user,
+            // normalize null → undefined for React components
+            name: user.name ?? undefined,
+            email: user.email ?? undefined,
+            image: user.image ?? undefined,
+            guestId: user.guestId ?? undefined,
+          }}
         />
       ) : (
         <LoginMessage />

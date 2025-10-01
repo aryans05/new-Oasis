@@ -24,8 +24,14 @@ export default function DeleteReservation({
 }: {
   bookingId: string;
 }) {
+  async function handleDelete(formData: FormData) {
+    // ✅ call the server action manually
+    await deleteReservation(formData);
+    // no return → avoids TS error
+  }
+
   return (
-    <form action={deleteReservation}>
+    <form action={handleDelete}>
       <input type="hidden" name="bookingId" value={bookingId} />
       <DeleteButton />
     </form>

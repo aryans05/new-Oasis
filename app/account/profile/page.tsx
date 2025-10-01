@@ -13,10 +13,14 @@ export default async function Page() {
 
   // 🔐 Protect route
   if (!session) {
-    redirect("/login"); // or handle unauthorized differently
+    redirect("/login");
   }
 
-  // 🧑 Fetch guest
+  // 🧑 Ensure user has an email before fetching guest
+  if (!session.user?.email) {
+    throw new Error("User email not found in session");
+  }
+
   const guest = await getGuest(session.user.email);
 
   if (!guest) {

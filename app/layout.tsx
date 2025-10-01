@@ -1,12 +1,23 @@
 import type { Metadata } from "next";
-import { Josefin_Sans } from "next/font/google";
+import localFont from "next/font/local";
 
 import Header from "./_components/Header";
 import "@/app/_styles/globals.css";
 
-// ✅ Load Google Font
-const josefin = Josefin_Sans({
-  subsets: ["latin"],
+// ✅ Load Josefin Sans locally
+const josefin = localFont({
+  src: [
+    {
+      path: "../public/fonts/JosefinSans/JosefinSans-Regular.ttf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../public/fonts/JosefinSans/JosefinSans-Bold.ttf",
+      weight: "700",
+      style: "normal",
+    },
+  ],
   display: "swap",
 });
 
@@ -19,9 +30,9 @@ export const metadata: Metadata = {
   description:
     "Luxurious cabin hotel, located in the heart of the Italian Dolomites, surrounded by beautiful mountains and dark forests",
   icons: {
-    icon: "/logo.png", // 👈 Place logo.png in /public folder
-    shortcut: "/favicon.ico", // 👈 fallback favicon
-    apple: "/apple-touch-icon.png", // 👈 optional for iOS
+    icon: "/logo.png",
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
   },
 };
 

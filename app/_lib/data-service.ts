@@ -2,6 +2,7 @@
 import { notFound } from "next/navigation";
 import { eachDayOfInterval } from "date-fns";
 import supabase from "./supabase";
+import { BookingWithCabin } from "./types";
 
 /////////////
 // GET
@@ -80,11 +81,16 @@ export async function getBooking(id: string) {
   return data;
 }
 
-export async function getBookings(guestId: string) {
+export async function getBookings(
+  guestId: string
+): Promise<BookingWithCabin[]> {
   const { data, error } = await supabase
     .from("bookings")
     .select(
-      "id, created_at, startDate, endDate, numNight, numGuests, totalPrice, guestId, cabinId, cabins(name, image)"
+      `
+      id, created_at, startDate, endDate, numNight, numGuests, totalPrice, guestId, cabinId, status,
+      cabin: cabins ( id, name, image )
+      `
     )
     .eq("guestId", guestId)
     .order("startDate");
@@ -94,7 +100,28 @@ export async function getBookings(guestId: string) {
     throw new Error("Bookings could not be loaded");
   }
 
-  return data ?? [];
+  // ✅ Normalize and cast safely
+  if (!data) return [];
+
+  return data.map((b: any) => ({
+    id: b.id,
+    created_at: b.created_at,
+    startDate: b.startDate,
+    endDate: b.endDate,
+    numNight: b.numNight,
+    numGuests: b.numGuests,
+    totalPrice: b.totalPrice,
+    guestId: b.guestId,
+    cabinId: b.cabinId,
+    status: b.status,
+    cabin: b.cabin
+      ? {
+          id: b.cabin.id,
+          name: b.cabin.name,
+          image: b.cabin.image,
+        }
+      : null,
+  })) as BookingWithCabin[];
 }
 
 export async function getBookedDatesByCabinId(cabinId: string) {
@@ -165,9 +192,6 @@ export async function createGuest(newGuest: any) {
   return data;
 }
 
-/**
- * Create a booking and return the inserted booking row.
- */
 export async function createBooking(newBooking: any) {
   const { data, error } = await supabase
     .from("bookings")

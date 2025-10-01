@@ -1,4 +1,3 @@
-// app/account/reservations/page.tsx
 import ReservationCard from "@/app/_components/ReservationCard";
 import { getBookings } from "@/app/_lib/data-service";
 import { auth } from "@/app/_lib/auth";

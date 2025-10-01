@@ -2,8 +2,9 @@ import { PencilSquareIcon } from "@heroicons/react/24/solid";
 import { format, formatDistance, isPast, isToday, parseISO } from "date-fns";
 import DeleteReservation from "./DeleteReservation";
 import Image from "next/image";
+import { BookingWithCabin } from "@/app/_lib/types";
 
-// ✅ Utility: format relative time nicely
+// Utility: format relative time nicely
 export const formatDistanceFromNow = (dateStr: string) =>
   formatDistance(parseISO(dateStr), new Date(), { addSuffix: true }).replace(
     "about ",
@@ -11,21 +12,7 @@ export const formatDistanceFromNow = (dateStr: string) =>
   );
 
 interface ReservationCardProps {
-  booking: {
-    id: string; // ✅ UUID string
-    guestId: string;
-    startDate: string;
-    endDate: string;
-    numNights: number; // ✅ match your DB column
-    totalPrice: number;
-    numGuests: number;
-    status: string;
-    created_at: string;
-    cabins: {
-      name: string;
-      image: string;
-    };
-  };
+  booking: BookingWithCabin;
 }
 
 function ReservationCard({ booking }: ReservationCardProps) {
@@ -33,31 +20,38 @@ function ReservationCard({ booking }: ReservationCardProps) {
     id,
     startDate,
     endDate,
-    numNights,
+    numNight,
     totalPrice,
     numGuests,
     created_at,
-    cabins: { name, image },
+    status,
+    cabin,
   } = booking;
 
   return (
     <div className="flex border border-primary-800 rounded-sm overflow-hidden">
-      {/* ✅ Image */}
+      {/* Cabin Image */}
       <div className="relative h-32 aspect-square">
-        <Image
-          src={image}
-          alt={`Cabin ${name}`}
-          fill
-          className="object-cover border-r border-primary-800"
-          sizes="128px"
-        />
+        {cabin?.image ? (
+          <Image
+            src={cabin.image}
+            alt={`Cabin ${cabin.name}`}
+            fill
+            className="object-cover border-r border-primary-800"
+            sizes="128px"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gray-700 text-sm">
+            No image
+          </div>
+        )}
       </div>
 
-      {/* ✅ Reservation details */}
+      {/* Reservation details */}
       <div className="flex-grow px-6 py-3 flex flex-col">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-semibold">
-            {numNights} nights in Cabin {name}
+            {numNight} nights in {cabin?.name ?? "Unknown cabin"}
           </h3>
           {isPast(new Date(startDate)) ? (
             <span className="bg-yellow-800 text-yellow-200 h-7 px-3 uppercase text-xs font-bold flex items-center rounded-sm">
@@ -90,7 +84,7 @@ function ReservationCard({ booking }: ReservationCardProps) {
         </div>
       </div>
 
-      {/* ✅ Actions */}
+      {/* Actions */}
       <div className="flex flex-col border-l border-primary-800 w-[110px]">
         <a
           href={`/account/reservations/edit/${id}`}
@@ -99,8 +93,6 @@ function ReservationCard({ booking }: ReservationCardProps) {
           <PencilSquareIcon className="h-5 w-5 text-primary-600 group-hover:text-primary-800 transition-colors" />
           <span className="mt-1">Edit</span>
         </a>
-
-        {/* ✅ Improved delete button */}
         <DeleteReservation bookingId={id} />
       </div>
     </div>

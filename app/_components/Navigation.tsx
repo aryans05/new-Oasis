@@ -31,8 +31,8 @@ export default async function Navigation() {
             >
               <img
                 className="h-8 rounded-full"
-                src={session.user.image}
-                alt={session.user.name}
+                src={session.user.image ?? "/default-avatar.png"} // ✅ fallback
+                alt={session.user.name ?? "User avatar"} // ✅ fallback
                 referrerPolicy="no-referrer"
               />
               <span>Guest area</span>
